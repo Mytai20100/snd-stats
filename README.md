@@ -1,4 +1,4 @@
-# Repo Stats API
+# Snd-stats 
 
 Fast TypeScript API for generating GitHub repo/user stats as SVG badges and cards. Includes Discord bot integration.
 
