@@ -417,9 +417,9 @@ MIT
 ## Support
 
 For issues and questions:
-- GitHub Issues: [your-repo-url]
+- GitHub Issues: [https://github.com/Mytai20100/snd-stats/issues]
 - API Status: https://api.snd.qzz.io/health
 
 ---
 
-Made with ❤️ using TypeScript and Express
+❤️ Made by mytai20100 
