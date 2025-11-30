@@ -1,425 +1,288 @@
-# Snd-stats 
+# snd-stats
 
-Fast TypeScript API for generating GitHub repo/user stats as SVG badges and cards. Includes Discord bot integration.
+Fast, lightweight API for generating GitHub statistics as SVG badges.
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-22-brightgreen)](package.json)
+[![Version](https://img.shields.io/badge/version-0.2beta-orange)](package.json)
 
 ## Features
 
-- SVG badges with hand-drawn style
+- SVG badges with real-time GitHub data
 - User and repository statistics
-- Ranking system
-- Discord server member count tracking
-- In-memory caching to avoid rate limits
-- Single-file architecture for easy deployment
-
-## Live API
-
-Base URL: `https://api.snd.qzz.io`
+- Multi-platform support (GitHub, Twitter, YouTube, Discord)
+- In-memory caching with configurable TTL
+- Rate limiting (60 requests/minute)
+- Zero external dependencies for core functionality
 
 ## Quick Start
+### Installation
 
-### Install dependencies
 ```bash
+# Clone repository
+git clone https://github.com/mytai20100/snd-stats.git
+cd snd-stats
+
+# Install dependencies
 npm install
-```
 
-### Configure environment
-
-Copy `.env.example` to `.env` and fill in your values:
-```bash
-cp .env.example .env
-```
-
-### Run locally
-```bash
-npm run dev
-```
-
-### Build for production
-```bash
-npm run build
+# Start server
 npm start
 ```
 
-### Run Discord bot
-```bash
-npm run bot
+
+### Environment Variables
+```env
+PORT=3444
+GITHUB_TOKEN=your_github_token
+API_KEY=your_api_key
+CACHE_TTL_SECONDS=300
 ```
 
-## API Endpoints
+## API Documentation
 
-### Health Check
-```
-GET /health
-```
+Base URL: `https://api.snd.qzz.io`
 
-**Example:**
-```bash
-curl https://api.snd.qzz.io/health
+### User Statistics
+```
+GET /stats/user/:username
 ```
 
-### User Stats
-```
-GET /stats/user/:username?format=svg|json
-```
+Parameters:
+- `format` - svg or json (default: svg)
+- `width` - Card width (default: 495)
+- `height` - Card height (default: 250)
+- `theme` - Color theme (default, dark, blue, green, etc.)
+- `chart_type` - line, bar, area, smooth (default: line)
+- `show_frameworks` - true or false (default: true)
+- `top_langs` - Number of languages to show (default: 5)
 
-**Examples:**
-```bash
-# Get SVG card
-curl https://api.snd.qzz.io/stats/user/torvalds
-
-# Get JSON data
-curl https://api.snd.qzz.io/stats/user/torvalds?format=json
+Example:
+```html
+![Stats](https://api.snd.qzz.io/stats/user/torvalds)
 ```
-
-### Repository Stats
+![Stats](https://api.snd.qzz.io/stats/user/torvalds)
+### Repository Statistics
 ```
-GET /stats/repo/:owner/:repo?format=svg|json
-```
-
-**Examples:**
-```bash
-# Get SVG card
-curl https://api.snd.qzz.io/stats/repo/facebook/react
-
-# Get JSON data
-curl https://api.snd.qzz.io/stats/repo/facebook/react?format=json
+GET /stats/repo/:owner/:repo
 ```
 
-### Badges
+Parameters:
+- `format` - svg or json (default: svg)
+- `width` - Card width (default: 495)
+- `height` - Card height (default: 280)
+- `show_chart` - true or false (default: true)
+- `chart_type` - line, bar, area, smooth
 
-**Flex badge (full card):**
+Example:
+```html
+![Repo](https://api.snd.qzz.io/stats/repo/facebook/react)
 ```
-GET /badge/flex?owner=:owner&repo=:repo
-GET /badge/flex?user=:username
+![Repo](https://api.snd.qzz.io/stats/repo/facebook/react)
+### Profile Card
+```
+GET /profile?username=:username
 ```
 
-**Static badge (compact):**
+Parameters:
+- `data` - Comma-separated fields: followers,repositories,stars,commits
+- `theme` - Color theme
+- `url` - Custom avatar URL
+- `background` - Background image URL
+
+Example:
+```html
+![Profile](https://api.snd.qzz.io/profile?username=mytai20100)
+```
+![Profile](https://api.snd.qzz.io/profile?username=mytai20100)
+### Custom Badges
+```
+GET /badge/custom
+```
+
+Parameters:
+- `text` - Badge text
+- `width` - Badge width (default: 250)
+- `height` - Badge height (default: 80)
+- `bg_color` - Background color (hex)
+- `text_color` - Text color (hex)
+- `theme` - blue, green, red, purple, gray, black, white
+
+Example:
+```html
+![Badge](https://api.snd.qzz.io/badge/custom?text=Hello%20World&theme=blue)
+```
+![Badge](https://api.snd.qzz.io/badge/custom?text=Hello%20World&theme=blue)
+### Static Badge
 ```
 GET /badge/static?owner=:owner&repo=:repo
 ```
 
-**Rank badge:**
+Compact badge showing language and stars.
+
+### Rank Badge
 ```
-GET /badge/rank?owner=:owner&repo=:repo&list=:repo1,:repo2,:repo3
+GET /badge/rank?owner=:owner&repo=:repo&list=:repos
 ```
 
-**Examples:**
+Compare repository ranking by stars.
+
+Example:
+```html
+![Rank](https://api.snd.qzz.io/badge/rank?owner=Mytai20100&repo=freeroot-jar)
+```
+![Rank](https://api.snd.qzz.io/badge/rank?owner=Mytai20100&repo=freeroot-jar)
+### Social Media Stats
+```
+GET /social/:platform/:identifier
+```
+
+Platforms: twitter, youtube
+
+Example:
+```html
+![Twitter](https://api.snd.qzz.io/social/twitter/github)
+```
+![Twitter](https://api.snd.qzz.io/social/twitter/github)
+### OS Badges
+```
+GET /os/:osname
+```
+
+Supported: Linux, Ubuntu, Debian, Windows, macOS, Android, iOS
+
+### Framework Badges
+```
+GET /framework/:name
+```
+
+Supported: React, Vue, Angular, Next.js, Django, Flask, Spring, Laravel, and more
+
+### Social Icons
+```
+GET /icon/social/:name
+```
+
+Platforms: github, twitter, youtube, discord, linkedin, instagram, facebook
+
+Parameters:
+- `size` - Icon size (default: 40)
+- `color` - Icon color (hex)
+- Example:
+- ![GitHub](https://api.snd.qzz.io/icon/social/github?size=32&color=333)
+- ![Twitter](https://api.snd.qzz.io/icon/social/twitter?size=32&color=1DA1F2)
+- ![YouTube](https://api.snd.qzz.io/icon/social/youtube?size=32&color=FF0000)
+### Available Icons
+```
+GET /icons/list
+```
+
+Returns JSON with all available icons by category.
+
+## Color Themes
+
+Available themes:
+- default - White background, blue accent
+- dark - Dark background, light text
+- blue - Blue theme
+- green - Green theme
+- purple - Purple theme
+- red - Red theme
+- orange - Orange theme
+- pink - Pink theme
+- gray - Gray theme
+- black - Black theme
+- minimal - Minimal white
+- minimal-dark - Minimal dark
+
+## Chart Types
+
+- `line` - Default line chart
+- `bar` - Bar chart
+- `area` - Area chart with gradient
+- `smooth` - Smooth curved line
+
+## Color Formats
+
+Supported formats:
+- Hex: `ffffff` or `#ffffff`
+- RGB: `255,255,255`
+
+## Discord Integration
+
+Update server stats:
 ```bash
-# Flex card for repository
-curl https://api.snd.qzz.io/badge/flex?owner=facebook&repo=react
-
-# Flex card for user
-curl https://api.snd.qzz.io/badge/flex?user=torvalds
-
-# Static badge
-curl https://api.snd.qzz.io/badge/static?owner=facebook&repo=react
-
-# Rank badge
-curl https://api.snd.qzz.io/badge/rank?owner=facebook&repo=react&list=vuejs/vue,angular/angular,facebook/react
-```
-
-### Ranking
-```
-GET /rank/repo?owner=:owner&repo=:repo&list=:repo1,:repo2,:repo3
-```
-
-**Example:**
-```bash
-curl "https://api.snd.qzz.io/rank/repo?owner=facebook&repo=react&list=vuejs/vue,angular/angular,facebook/react"
-```
-
-### Discord Integration
-
-**Update server stats:**
-```
 POST /discord/update
-Headers: x-api-key: your_api_key
-Body: { "serverId": "123", "serverName": "My Server", "members": 1500 }
+Headers: X-API-Key: your_api_key
+Body: {
+  "serverId": "123456789",
+  "serverName": "Server Name",
+  "members": 1234
+}
 ```
 
-**Get server badge:**
+Get badge:
 ```
 GET /discord/badge/:serverId
 ```
 
-**Examples:**
+## Rate Limiting
+
+- 60 requests per minute per IP
+- Cached responses for 5 minutes
+- GitHub API: 5000 requests/hour with token
+
+## Deployment
+
+### Docker
 ```bash
-# Update Discord server stats
-curl -X POST https://api.snd.qzz.io/discord/update \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: your_api_key" \
-  -d '{"serverId":"123456789","serverName":"My Discord","members":1500}'
-
-# Get Discord server badge
-curl https://api.snd.qzz.io/discord/badge/123456789
+docker build -t snd-stats .
+docker run -d -p 3444:3444 -e GITHUB_TOKEN=token snd-stats
 ```
 
-## README Integration Examples
-
-### Static Badge
-
-Show repository stats in a compact badge:
-```markdown
-![Snd-tats](https://api.snd.qzz.io/badge/static?owner=facebook&repo=react)
-```
-
-![Snd-tats](https://api.snd.qzz.io/badge/static?owner=facebook&repo=react)
-
----
-
-### Flex Card - Repository
-
-Display full repository statistics card:
-```markdown
-![React Stats](https://api.snd.qzz.io/stats/repo/facebook/react)
-```
-
-![React Stats](https://api.snd.qzz.io/stats/repo/facebook/react)
-
----
-
-### Flex Card - User
-
-Display user GitHub statistics:
-```markdown
-![User Stats](https://api.snd.qzz.io/stats/user/torvalds)
-```
-
-![User Stats](https://api.snd.qzz.io/stats/user/torvalds)
-
----
-
-### Rank Badge
-
-Show repository rank among competitors:
-```markdown
-![Rank](https://api.snd.qzz.io/badge/rank?owner=facebook&repo=react&list=vuejs/vue,angular/angular,facebook/react)
-```
-
-![Rank](https://api.snd.qzz.io/badge/rank?owner=facebook&repo=react&list=vuejs/vue,angular/angular,facebook/react)
-
----
-
-### Discord Server Badge
-
-Display Discord server member count:
-```markdown
-![Discord Members](https://api.snd.qzz.io/discord/badge/YOUR_SERVER_ID)
-```
-
----
-
-## Advanced Examples
-
-### Custom Repository Comparison
-
-Compare your repo against popular alternatives:
-```markdown
-
-![My Project](https://api.snd.qzz.io/badge/flex?owner=myusername&repo=myproject)
-
-
-![Rank](https://api.snd.qzz.io/badge/rank?owner=myusername&repo=myproject&list=competitor1/repo1,competitor2/repo2,myusername/myproject)
-```
-
-### Multiple User Cards
-
-Show stats for your team members:
-```markdown
-### Core Team
-
-![Alice](https://api.snd.qzz.io/badge/flex?user=alice)
-![Bob](https://api.snd.qzz.io/badge/flex?user=bob)
-![Charlie](https://api.snd.qzz.io/badge/flex?user=charlie)
-```
-
-### Combined Stats Dashboard
-
-Create a complete stats dashboard in your README:
-```markdown
-## 📊 Project Statistics
-
-### Repository Stats
-![Repo Card](https://api.snd.qzz.io/stats/repo/myorg/myrepo)
-
-### Quick Stats
-![Static Badge](https://api.snd.qzz.io/badge/static?owner=myorg&repo=myrepo)
-
-### Community
-![Discord](https://api.snd.qzz.io/discord/badge/YOUR_SERVER_ID)
-
-### Ranking
-![Rank](https://api.snd.qzz.io/badge/rank?owner=myorg&repo=myrepo&list=competitor1/repo,competitor2/repo,myorg/myrepo)
-```
-
-## Docker Deployment
-```bash
-# Build image
-docker build -t repo-stats-api .
-
-# Run container
-docker run -d \
-  -p 3444:3444 \
-  -e GITHUB_TOKEN=your_github_token \
-  -e API_KEY=your_secret_key \
-  --name repo-stats-api \
-  repo-stats-api
-```
-
-## Environment Variables
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `PORT` | Server port | `3444` | No |
-| `GITHUB_TOKEN` | GitHub personal access token | - | Recommended |
-| `API_KEY` | Secret key for Discord endpoint | `default-secret-key` | Yes (production) |
-| `CACHE_TTL_SECONDS` | Cache duration in seconds | `300` | No |
-| `DISCORD_TOKEN` | Discord bot token (for bot) | - | Yes (for bot) |
-| `API_URL` | API base URL (for bot) | `http://localhost:3444` | Yes (for bot) |
-
-## Rate Limits
-
-- **Without `GITHUB_TOKEN`**: 60 requests/hour per IP
-- **With `GITHUB_TOKEN`**: 5,000 requests/hour
-- **Caching**: Default 5-minute TTL reduces GitHub API calls
-
-## Discord Bot Setup
-
-1. Create a Discord bot at [Discord Developer Portal](https://discord.com/developers/applications)
-2. Enable `Server Members Intent` in Bot settings
-3. Copy bot token and add to `.env`
-4. Run the bot:
-```bash
-npm run bot
-```
-
-The bot will automatically send member count updates to the API when:
-- Bot joins a new server
-- A member joins the server
-- A member leaves the server
-
-## Supported Languages
-
-The API includes built-in icons for these languages:
-
-- JavaScript, TypeScript
-- Python, Java, Go, Rust
-- C, C++, C#
-- PHP, Ruby, Swift, Kotlin
-- Lua, Shell
-- HTML, CSS
-
-Unknown languages display a generic code icon.
-
-## Features
-
-### Hand-Drawn Style
-
-All SVG badges use a sketchy, hand-drawn aesthetic:
-- Irregular stroke paths
-- Dashed strokes
-- Imperfect circles
-- Stylized sparklines
-
-### Smart Caching
-
-Intelligent caching system to minimize GitHub API calls:
-- User stats cached for 5 minutes
-- Repository stats cached for 5 minutes
-- Automatic cache invalidation
-
-### Error Handling
-
-Graceful error responses:
-- GitHub rate limit errors
-- Invalid repository/user names
-- Missing parameters
-- Authentication failures
-
-## Testing Locally
-```bash
-# Health check
-curl http://localhost:3444/health
-
-# User stats (JSON)
-curl http://localhost:3444/stats/user/torvalds?format=json
-
-# Snd-tats (SVG)
-curl http://localhost:3444/stats/repo/facebook/react > badge.svg
-
-# Static badge
-curl http://localhost:3444/badge/static?owner=facebook&repo=react > static.svg
-
-# Discord update
-curl -X POST http://localhost:3444/discord/update \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: your_api_key" \
-  -d '{"serverId":"123","serverName":"Test Server","members":100}'
-```
-
-## Production Deployment
-
-### Using PM2
+### PM2
 ```bash
 npm run build
-pm2 start dist/app.js --name repo-stats-api
+pm2 start dist/app.js --name snd-stats
 ```
 
-### Using systemd
-
-Create `/etc/systemd/system/repo-stats-api.service`:
-```ini
-[Unit]
-Description=Snd-tats API
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/path/to/repo-stats-api
-ExecStart=/usr/bin/node dist/app.js
-Restart=on-failure
-Environment=NODE_ENV=production
-Environment=PORT=3444
-Environment=GITHUB_TOKEN=your_token
-Environment=API_KEY=your_key
-
-[Install]
-WantedBy=multi-user.target
+## Health Check
+```
+GET /health
 ```
 
-Then:
-```bash
-sudo systemctl enable repo-stats-api
-sudo systemctl start repo-stats-api
-```
+Returns server status and cache information.
 
-## Security Notes
+## Error Handling
 
-- Always use a strong `API_KEY` in production
-- Keep `GITHUB_TOKEN` secret
-- Use HTTPS in production (recommended: nginx reverse proxy)
-- Validate all user inputs
-- Rate limit requests at reverse proxy level
+Standard HTTP status codes:
+- 200 - Success
+- 400 - Bad request
+- 404 - Not found
+- 429 - Rate limit exceeded
+- 500 - Server error
 
-## Contributing
+## Security
 
-Pull requests are welcome! Please ensure:
-- Code follows existing style
-- Comments are in English
-- All endpoints are tested
-- Documentation is updated
+- API key required for sensitive endpoints
+- Rate limiting to prevent abuse
+- Input validation on all parameters
+- CORS enabled for cross-origin requests
 
 ## License
 
-MIT
+MIT License - see LICENSE file
 
-## Support
+## Links
 
-For issues and questions:
-- GitHub Issues: [https://github.com/Mytai20100/snd-stats/issues]
+- Documentation: https://github.com/mytai20100/snd-stats
+- Issues: https://github.com/mytai20100/snd-stats/issues
 - API Status: https://api.snd.qzz.io/health
 
----
+<div align="center">
 
-❤️ Made by mytai20100 
+**[⬆ Back to Top](#-snd-stats-api-v21)**
+
+Made with ❤️ by [mytai20100](https://github.com/mytai20100)
+
+</div>
