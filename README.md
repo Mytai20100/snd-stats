@@ -160,10 +160,10 @@ curl https://api.snd.qzz.io/discord/badge/123456789
 
 Show repository stats in a compact badge:
 ```markdown
-![Repo Stats](https://api.snd.qzz.io/badge/static?owner=facebook&repo=react)
+![Snd-tats](https://api.snd.qzz.io/badge/static?owner=facebook&repo=react)
 ```
 
-![Repo Stats](https://api.snd.qzz.io/badge/static?owner=facebook&repo=react)
+![Snd-tats](https://api.snd.qzz.io/badge/static?owner=facebook&repo=react)
 
 ---
 
@@ -344,7 +344,7 @@ curl http://localhost:3000/health
 # User stats (JSON)
 curl http://localhost:3000/stats/user/torvalds?format=json
 
-# Repo stats (SVG)
+# Snd-tats (SVG)
 curl http://localhost:3000/stats/repo/facebook/react > badge.svg
 
 # Static badge
@@ -370,7 +370,7 @@ pm2 start dist/app.js --name repo-stats-api
 Create `/etc/systemd/system/repo-stats-api.service`:
 ```ini
 [Unit]
-Description=Repo Stats API
+Description=Snd-tats API
 After=network.target
 
 [Service]
