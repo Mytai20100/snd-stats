@@ -259,7 +259,7 @@ docker build -t repo-stats-api .
 
 # Run container
 docker run -d \
-  -p 3000:3000 \
+  -p 3444:3444 \
   -e GITHUB_TOKEN=your_github_token \
   -e API_KEY=your_secret_key \
   --name repo-stats-api \
@@ -270,12 +270,12 @@ docker run -d \
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `PORT` | Server port | `3000` | No |
+| `PORT` | Server port | `3444` | No |
 | `GITHUB_TOKEN` | GitHub personal access token | - | Recommended |
 | `API_KEY` | Secret key for Discord endpoint | `default-secret-key` | Yes (production) |
 | `CACHE_TTL_SECONDS` | Cache duration in seconds | `300` | No |
 | `DISCORD_TOKEN` | Discord bot token (for bot) | - | Yes (for bot) |
-| `API_URL` | API base URL (for bot) | `http://localhost:3000` | Yes (for bot) |
+| `API_URL` | API base URL (for bot) | `http://localhost:3444` | Yes (for bot) |
 
 ## Rate Limits
 
@@ -339,19 +339,19 @@ Graceful error responses:
 ## Testing Locally
 ```bash
 # Health check
-curl http://localhost:3000/health
+curl http://localhost:3444/health
 
 # User stats (JSON)
-curl http://localhost:3000/stats/user/torvalds?format=json
+curl http://localhost:3444/stats/user/torvalds?format=json
 
 # Snd-tats (SVG)
-curl http://localhost:3000/stats/repo/facebook/react > badge.svg
+curl http://localhost:3444/stats/repo/facebook/react > badge.svg
 
 # Static badge
-curl http://localhost:3000/badge/static?owner=facebook&repo=react > static.svg
+curl http://localhost:3444/badge/static?owner=facebook&repo=react > static.svg
 
 # Discord update
-curl -X POST http://localhost:3000/discord/update \
+curl -X POST http://localhost:3444/discord/update \
   -H "Content-Type: application/json" \
   -H "x-api-key: your_api_key" \
   -d '{"serverId":"123","serverName":"Test Server","members":100}'
@@ -380,7 +380,7 @@ WorkingDirectory=/path/to/repo-stats-api
 ExecStart=/usr/bin/node dist/app.js
 Restart=on-failure
 Environment=NODE_ENV=production
-Environment=PORT=3000
+Environment=PORT=3444
 Environment=GITHUB_TOKEN=your_token
 Environment=API_KEY=your_key
 
