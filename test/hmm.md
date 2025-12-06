@@ -27,4 +27,4 @@
 ![Badge](https://api.snd.qzz.io/custom?text=Hi!%20I'm%20DevOps%20|%20Cybersecurity&theme=gradient&width=450&height=70&font_size=17&url=https://avatars.githubusercontent.com/u/YOUR_ID&border_radius=18)(https://api.snd.qzz.io/custom?text=%F0%9F%91%8B%20Hi!%20I%27m%20DevOps%20|%20Cybersecurity&theme=white&width=420&height=65&font_size=17&icon=code&border_radius=15&animation=glow)
 
 <!-- Style 10: Multiple lines -->
-![Badge](https://api.snd.qzz.io/custom?text=%F0%9F%91%8B%20Hi!%20I%27m%20DevOps%20|%20Cybersecurity&theme=white&width=420&height=65&font_size=17&icon=code&border_radius=15&animation=glow)
+![Badge][(https://api.snd.qzz.io/custom?text=%F0%9F%91%8B%20Hi!%20I%27m%20DevOps%20|%20Cybersecurity&theme=white&width=420&height=65&font_size=17&icon=code&border_radius=15&animation=glow)](https://api.snd.qzz.io)
