@@ -112,7 +112,7 @@ Example:
 ```html
 ![Badge](https://api.snd.qzz.io/badge/custom?text=Hello%20World&theme=blue)
 ```
-![Badge](https://api.snd.qzz.io/badge/custom?text=Hello%20World&theme=blue)
+![Badge](https://api.snd.qzz.io/custom?text=Hello%20World&theme=blue)
 ### Static Badge
 ```
 GET /badge/static?owner=:owner&repo=:repo
