@@ -28,3 +28,4 @@
 
 <!-- Style 10: Multiple lines -->
 ![Badge][(https://api.snd.qzz.io/custom?text=%F0%9F%91%8B%20Hi!%20I%27m%20DevOps%20|%20Cybersecurity&theme=white&width=420&height=65&font_size=17&icon=code&border_radius=15&animation=glow)](https://api.snd.qzz.io)
+[![Badge]((https://api.snd.qzz.io/custom?text=%F0%9F%91%8B%20Hi!%20I%27m%20DevOps%20|%20Cybersecurity&theme=white&width=420&height=65&font_size=17&icon=code&border_radius=15&animation=glow)](https://github.com/mytai20100/snd-stats)
