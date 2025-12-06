@@ -1,1 +1,1 @@
-![Badge](https://api.snd.qzz.io/custom?text=Hello%20World&theme=blue)
+![Badge](https://api.snd.qzz.io/custom?text=Fuck%20thdn&theme=blue)
