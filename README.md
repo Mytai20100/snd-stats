@@ -41,7 +41,7 @@ CACHE_TTL_SECONDS=300
 
 ## API Documentation
 
-Base URL: `https://api.snd.qzz.io`
+Base URL: `https://api.snd.qzz.io`(my host) or `https://snd-stats.vercel.app/`
 
 ### User Statistics
 ```
