@@ -1,19 +1,19 @@
 /**
- * snd-stats - GitHub Stats API v0.2beta
- * Clean, fast API for GitHub stats with SVG badges
+ * snd-stats - GitHub Stats API v2.1
+ * Clean, fast, production-ready API for GitHub stats with SVG badges
  * Author: mytai20100
  * Repository: github.com/mytai20100/snd-stats
  */
 
 import express, { Request, Response, NextFunction } from 'express';
-
+import { Buffer } from 'buffer';
 const app = express();
 app.use(express.json());
 
 // Environment configuration
 const PORT = process.env.PORT || 3444;
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''; //Your github token
-const API_KEY = process.env.API_KEY || 'default-secret-key';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''; // Your token github ?
+const API_KEY = process.env.API_KEY || 'sayget69_67';
 const CACHE_TTL = parseInt(process.env.CACHE_TTL_SECONDS || '300') * 1000;
 const TWITTER_BEARER = process.env.TWITTER_BEARER_TOKEN || '';
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
@@ -72,7 +72,9 @@ interface BadgeOptions {
   font_weight?: string; // '400', '600', '700'
   text_effect?: string; // 'none', 'shadow', 'glow', 'fade', 'slide'
 }
-
+interface ViewCounter {
+  [key: string]: number;
+}
 // In-memory stores
 const cache = new Map<string, CacheEntry>();
 const discordServers = new Map<string, DiscordServer>();
@@ -81,7 +83,8 @@ const requestCounts = new Map<string, RateLimitEntry>();
 // Rate limiting config
 const RATE_LIMIT_WINDOW = 60000;
 const RATE_LIMIT_MAX = 60;
-
+// view
+const viewCounters: ViewCounter = {};
 // Extended icon mappings
 const languageIcons: Record<string, string> = {
   JavaScript: '<path d="M0 0h24v24H0V0zm22.034 18.276c-.175-1.095-.888-2.015-3.003-2.873-.736-.345-1.554-.585-1.797-1.14-.091-.33-.105-.51-.046-.705.15-.646.915-.84 1.515-.66.39.12.75.42.976.9 1.034-.676 1.034-.676 1.755-1.125-.27-.42-.404-.601-.586-.78-.63-.705-1.469-1.065-2.834-1.034l-.705.089c-.676.165-1.32.525-1.71 1.005-1.14 1.291-.811 3.541.569 4.471 1.365 1.02 3.361 1.244 3.616 2.205.24 1.17-.87 1.545-1.966 1.41-.811-.18-1.26-.586-1.755-1.336l-1.83 1.051c.21.48.45.689.81 1.109 1.74 1.756 6.09 1.666 6.871-1.004.029-.09.24-.705.074-1.65l.046.067zm-8.983-7.245h-2.248c0 1.938-.009 3.864-.009 5.805 0 1.232.063 2.363-.138 2.711-.33.689-1.18.601-1.566.48-.396-.196-.597-.466-.83-.855-.063-.105-.11-.196-.127-.196l-1.825 1.125c.305.63.75 1.172 1.324 1.517.855.51 2.004.675 3.207.405.783-.226 1.458-.691 1.811-1.411.51-.93.402-2.07.397-3.346.012-2.054 0-4.109 0-6.179l.004-.056z" fill="#F7DF1E"/>',
@@ -255,8 +258,8 @@ function parseColor(color: string | undefined, defaultColor: string): string {
   
   return defaultColor;
 }
-function generateProfileCard(stats: any, options: BadgeOptions = {}): string {
-  const width = parseInt(options.width || '500');
+async function generateProfileCard(stats: any, options: BadgeOptions = {}): Promise<string> {
+   const width = parseInt(options.width || '500');
   const height = parseInt(options.height || '200');
   const theme = themes[options.theme || 'default'] || themes.default;
   const bgColor = parseColor(options.bg_color, theme.bg);
@@ -266,18 +269,15 @@ function generateProfileCard(stats: any, options: BadgeOptions = {}): string {
   const secondaryColor = theme.secondary;
   const fontSize = parseInt(options.font_size || '14');
   
-  // Parse data parameter
   const dataFields = (options.data || 'followers,repositories,stars,commits').split(',');
   const showFollowers = dataFields.includes('followers');
   const showRepos = dataFields.includes('repositories');
   const showStars = dataFields.includes('stars');
   const showCommits = dataFields.includes('commits');
   
-  // Custom images
-  const customImageUrl = options.url || '';
-  const backgroundImageUrl = options.background || '';
+  // Convert avatar to base64
+  const avatarBase64 = await getBase64Image(options.url || stats.avatar_url);
   
-  // Prepare stats display
   let yOffset = 120;
   let statsHTML = '';
   
@@ -317,47 +317,32 @@ function generateProfileCard(stats: any, options: BadgeOptions = {}): string {
   return minifySVG(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <style>
-        .profile-title { font: 700 20px 'Segoe UI', sans-serif; fill: ${textColor}; }
-        .profile-subtitle { font: 400 14px 'Segoe UI', sans-serif; fill: ${secondaryColor}; }
-        .stat-label { font: 400 12px 'Segoe UI', sans-serif; fill: ${secondaryColor}; }
-        .stat-value { font: 700 18px 'Segoe UI', sans-serif; fill: ${accentColor}; }
-        .lang-badge { font: 400 11px 'Segoe UI', sans-serif; fill: ${textColor}; }
+        .profile-title { font: 700 20px 'Segoe UI', Ubuntu, sans-serif; fill: ${textColor}; }
+        .profile-subtitle { font: 400 14px 'Segoe UI', Ubuntu, sans-serif; fill: ${secondaryColor}; }
+        .stat-label { font: 400 12px 'Segoe UI', Ubuntu, sans-serif; fill: ${secondaryColor}; }
+        .stat-value { font: 700 18px 'Segoe UI', Ubuntu, sans-serif; fill: ${accentColor}; }
+        .lang-badge { font: 400 11px 'Segoe UI', Ubuntu, sans-serif; fill: ${textColor}; }
       </style>
-      ${backgroundImageUrl ? `
-        <pattern id="bgImage" x="0" y="0" width="1" height="1">
-          <image href="${backgroundImageUrl}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice" opacity="0.1"/>
-        </pattern>
-      ` : ''}
+      <clipPath id="avatar-clip-${stats.username}">
+        <circle cx="70" cy="70" r="45"/>
+      </clipPath>
     </defs>
     
-    <rect width="${width}" height="${height}" fill="${backgroundImageUrl ? 'url(#bgImage)' : bgColor}" rx="10"/>
-    <rect width="${width}" height="${height}" fill="${bgColor}" opacity="${backgroundImageUrl ? '0.9' : '1'}" rx="10"/>
+    <rect width="${width}" height="${height}" fill="${bgColor}" rx="10"/>
     <rect x="1" y="1" width="${width - 2}" height="${height - 2}" fill="none" stroke="${borderColor}" stroke-width="1" rx="10"/>
     
-    <!-- Avatar -->
-    <clipPath id="avatar-clip">
-      <circle cx="70" cy="70" r="45"/>
-    </clipPath>
-    ${customImageUrl ? `
-      <image href="${customImageUrl}" x="25" y="25" width="90" height="90" clip-path="url(#avatar-clip)"/>
-    ` : `
-      <image href="${stats.avatar_url}" x="25" y="25" width="90" height="90" clip-path="url(#avatar-clip)"/>
-    `}
+    ${avatarBase64 ? `<image href="${avatarBase64}" x="25" y="25" width="90" height="90" clip-path="url(#avatar-clip-${stats.username})"/>` : ''}
     <circle cx="70" cy="70" r="45" fill="none" stroke="${accentColor}" stroke-width="2"/>
     
-    <!-- Name and Username -->
     <text x="140" y="55" class="profile-title">${stats.name}</text>
     <text x="140" y="75" class="profile-subtitle">@${stats.username}</text>
     
-    <!-- Top Language Badge -->
     <g transform="translate(140, 85)">
       ${getIcon(stats.topLanguage, 0, 0, 'language')}
       <text x="25" y="15" class="lang-badge">${stats.topLanguage}</text>
     </g>
     
-    <!-- Stats -->
     ${statsHTML}
-    
     ${generateWatermark(width - 180, height - 10, secondaryColor)}
   </svg>`);
 }
@@ -388,7 +373,16 @@ async function fetchWithCache(key: string, fetcher: () => Promise<any>) {
   cache.set(key, { data, expires: Date.now() + CACHE_TTL });
   return data;
 }
-
+async function getBase64Image(url: string): Promise<string> {
+  try {
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    return `data:image/png;base64,${base64}`;
+  } catch {
+    return ''; // fallback to empty
+  }
+}
 async function githubFetch(endpoint: string): Promise<any> {
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',
@@ -400,6 +394,7 @@ async function githubFetch(endpoint: string): Promise<any> {
   if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
   return res.json();
 }
+
 
 async function fetchTwitterStats(username: string) {
   if (!TWITTER_BEARER) return null;
@@ -709,13 +704,14 @@ function generateUserCard(stats: any, options: BadgeOptions = {}): string {
   const followerData = stats.followerHistory?.slice(-10) || Array(10).fill(0);
   const topLanguages = stats.languages.slice(0, topLangs);
   
-  return minifySVG(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+  return minifySVG(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <defs>
       <style>
-        .title { font: 600 20px 'Segoe UI', sans-serif; fill: ${accentColor}; }
-        .stat { font: 400 ${fontSize}px 'Segoe UI', sans-serif; fill: ${textColor}; }
-        .value { font: 600 ${fontSize + 2}px 'Segoe UI', sans-serif; fill: ${accentColor}; }
-        .lang { font: 400 12px 'Segoe UI', sans-serif; fill: ${textColor}; opacity: 0.8; }
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&amp;display=swap');
+        .title { font: 600 20px 'Segoe UI', Ubuntu, Arial, sans-serif; fill: ${accentColor}; }
+        .stat { font: 400 ${fontSize}px 'Segoe UI', Ubuntu, Arial, sans-serif; fill: ${textColor}; }
+        .value { font: 600 ${fontSize + 2}px 'Segoe UI', Ubuntu, Arial, sans-serif; fill: ${accentColor}; }
+        .lang { font: 400 12px 'Segoe UI', Ubuntu, Arial, sans-serif; fill: ${textColor}; opacity: 0.8; }
       </style>
     </defs>
     
@@ -772,14 +768,14 @@ function generateRepoCard(stats: any, options: BadgeOptions = {}): string {
   const commitData = stats.commitHistory || Array(15).fill(0);
   const starsData = stats.starsHistory || Array(15).fill(0);
   
-  return minifySVG(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+  return minifySVG(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <defs>
       <style>
-        .title { font: 700 18px 'Segoe UI', sans-serif; fill: ${textColor}; }
-        .desc { font: 400 12px 'Segoe UI', sans-serif; fill: ${secondaryColor}; }
-        .stat { font: 400 ${fontSize}px 'Segoe UI', sans-serif; fill: ${textColor}; }
-        .value { font: 700 ${fontSize + 2}px 'Segoe UI', sans-serif; fill: ${accentColor}; }
-        .lang-badge { font: 400 11px 'Segoe UI', sans-serif; fill: ${textColor}; }
+        .title { font: 700 18px 'Segoe UI', Ubuntu, Arial, sans-serif; fill: ${textColor}; }
+        .desc { font: 400 12px 'Segoe UI', Ubuntu, Arial, sans-serif; fill: ${secondaryColor}; }
+        .stat { font: 400 ${fontSize}px 'Segoe UI', Ubuntu, Arial, sans-serif; fill: ${textColor}; }
+        .value { font: 700 ${fontSize + 2}px 'Segoe UI', Ubuntu, Arial, sans-serif; fill: ${accentColor}; }
+        .lang-badge { font: 400 11px 'Segoe UI', Ubuntu, Arial, sans-serif; fill: ${textColor}; }
       </style>
     </defs>
     
@@ -989,7 +985,6 @@ function generateCustomBadge(options: CustomBadgeOptions): string {
   const width = parseInt(options.width || '250');
   const height = parseInt(options.height || '80');
   
-  // Theme đơn giản
   const simpleThemes: Record<string, { bg: string; text: string; accent: string }> = {
     blue: { bg: '#3b82f6', text: '#ffffff', accent: '#1d4ed8' },
     green: { bg: '#22c55e', text: '#ffffff', accent: '#15803d' },
@@ -1004,35 +999,103 @@ function generateCustomBadge(options: CustomBadgeOptions): string {
   const bgColor = parseColor(options.bg_color, selectedTheme.bg);
   const textColor = parseColor(options.text_color, selectedTheme.text);
   const accentColor = parseColor(options.accent_color, selectedTheme.accent);
-  const fontSize = parseInt(options.font_size || '16');
+  const fontSize = parseInt(options.font_size as string || '16');
   const borderRadius = parseInt(options.border_radius || '8');
   const showLogo = options.logo !== 'false';
   
-  // Text settings
+  // Font settings
+  const fontFamily = options.font_family as string || 'Segoe UI, sans-serif';
+  const fontWeight = options.font_weight as string || '600';
+  
+  // Image settings
+  const imageUrl = options.url as string || '';
+  const imageSize = parseInt(options.width as string || '40');
+  const imagePosition = options.text_position as string || 'left'; // left, right, center
+  
   const customText = options.text || 'Custom Badge';
   const textAlign = options.text_align || 'center';
   
   let textAnchor = 'middle';
   let textX = width / 2;
-  if (textAlign === 'left') {
-    textAnchor = 'start';
-    textX = 20;
-  } else if (textAlign === 'right') {
-    textAnchor = 'end';
-    textX = width - 20;
+  let imageX = 20;
+  let textOffset = 0;
+  
+  if (imageUrl) {
+    if (imagePosition === 'left') {
+      textOffset = imageSize + 15;
+      imageX = 10;
+      if (textAlign === 'center') {
+        textX = (width + textOffset) / 2;
+      } else if (textAlign === 'left') {
+        textAnchor = 'start';
+        textX = textOffset + 10;
+      }
+    } else if (imagePosition === 'right') {
+      imageX = width - imageSize - 10;
+      if (textAlign === 'center') {
+        textX = (width - imageSize - 15) / 2;
+      } else if (textAlign === 'right') {
+        textAnchor = 'end';
+        textX = width - imageSize - 20;
+      }
+    } else {
+      // center position
+      textX = width / 2;
+      imageX = (width - imageSize) / 2;
+    }
+  } else {
+    if (textAlign === 'left') {
+      textAnchor = 'start';
+      textX = 20;
+    } else if (textAlign === 'right') {
+      textAnchor = 'end';
+      textX = width - 20;
+    }
   }
   
   return minifySVG(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <style>
         .badge-text { 
-          font: 600 ${fontSize}px 'Segoe UI', sans-serif; 
+          font-family: ${fontFamily};
+          font-size: ${fontSize}px;
+          font-weight: ${fontWeight};
           fill: ${textColor}; 
         }
       </style>
+      ${imageUrl ? `
+      <clipPath id="img-clip">
+        <circle cx="${imageX + imageSize / 2}" cy="${height / 2}" r="${imageSize / 2}"/>
+      </clipPath>
+      ` : ''}
     </defs>
+    
     <rect width="${width}" height="${height}" fill="${bgColor}" rx="${borderRadius}"/>
-    <text x="${textX}" y="${height / 2 + fontSize / 3}" text-anchor="${textAnchor}" class="badge-text">${customText}</text>
+    
+    ${imageUrl ? `
+      <image 
+        href="${imageUrl}" 
+        x="${imageX}" 
+        y="${(height - imageSize) / 2}" 
+        width="${imageSize}" 
+        height="${imageSize}"
+        clip-path="url(#img-clip)"
+        preserveAspectRatio="xMidYMid slice"/>
+      <circle 
+        cx="${imageX + imageSize / 2}" 
+        cy="${height / 2}" 
+        r="${imageSize / 2}" 
+        fill="none" 
+        stroke="${accentColor}" 
+        stroke-width="2"/>
+    ` : ''}
+    
+    <text 
+      x="${textX}" 
+      y="${height / 2 + fontSize / 3}" 
+      text-anchor="${textAnchor}" 
+      class="badge-text">${customText}</text>
+    
     ${showLogo ? generateWatermark(width - 180, height - 10, textColor) : ''}
   </svg>`);
 }
@@ -1121,48 +1184,254 @@ app.get('/stats/repo/:owner/:repo', async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 });
-app.get('/profile', async (req: Request, res: Response) => {
+app.get('/view/:username', (req: Request, res: Response) => {
   try {
-    const { username, data, theme, url, background } = req.query;
+    const { username } = req.params;
+    const count = viewCounters[username] || 0;
+    viewCounters[username] = count + 1;
     
-    if (!username) {
-      return res.status(400).json({ error: 'Username is required' });
+    const label = req.query.label as string || 'views';
+    const labelColor = parseColor(req.query.label_color as string, '#555555');
+    const color = parseColor(req.query.color as string, '#4c1');
+    const style = req.query.style as string || 'flat'; // flat, flat-square, plastic, for-the-badge, social
+    const logo = req.query.logo as string || 'eye';
+    const logoColor = parseColor(req.query.logo_color as string, '#ffffff');
+    const logoWidth = req.query.logo_width ? parseInt(req.query.logo_width as string) : 14;
+    const customImageUrl = req.query.url as string || '';
+    
+    // Font settings
+    const fontFamily = req.query.font_family as string || 'Verdana,Geneva,DejaVu Sans,sans-serif';
+    const fontSize = parseInt(req.query.font_size as string) || 11;
+    let fontWeight = req.query.font_weight as string || '400';
+    
+    // Calculate dimensions
+    const labelWidth = Math.max(label.length * 6.5 + 20, 60);
+    const valueWidth = Math.max(count.toString().length * 7 + 20, 45);
+    const logoSpace = (customImageUrl || logo !== 'none') ? logoWidth + 8 : 0;
+    const totalLabelWidth = labelWidth + logoSpace;
+    const totalWidth = totalLabelWidth + valueWidth;
+    
+    let height = 20;
+    let borderRadius = 3;
+    let shadowFilter = '';
+    let labelFontSize = fontSize;
+    let valueFontSize = fontSize;
+    
+    // Style variations
+    if (style === 'flat-square') {
+      borderRadius = 0;
+    } else if (style === 'for-the-badge') {
+      height = 28;
+      borderRadius = 0;
+      labelFontSize = 10;
+      valueFontSize = 10;
+      fontWeight = '700';
+    } else if (style === 'plastic') {
+      shadowFilter = 'url(#shadow)';
+    } else if (style === 'social') {
+      // GitHub social style
+      height = 20;
+      borderRadius = 3;
     }
     
-    const stats = await getUserStats(username as string);
+    // Social icons mapping
+    const socialLogos: Record<string, string> = {
+      github: 'M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z',
+      star: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+      users: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+      heart: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
+      fire: 'M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z',
+      code: 'M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z',
+    };
     
-    res.setHeader('Content-Type', 'image/svg+xml');
-    res.setHeader('Cache-Control', 'public, max-age=1800');
-    res.send(generateProfileCard(stats, req.query as BadgeOptions));
+    const logoSvg = customImageUrl ? '' : (socialLogos[logo] || socialLogos.eye);
+    const socialGradient = style === 'social' ? `
+      <linearGradient id="a" x2="0" y2="100%">
+        <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+        <stop offset="1" stop-opacity=".1"/>
+      </linearGradient>
+      <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+        <feOffset dx="0" dy="1" result="offsetblur"/>
+        <feComponentTransfer>
+          <feFuncA type="linear" slope="0.15"/>
+        </feComponentTransfer>
+        <feMerge>
+          <feMergeNode/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    ` : '';
+    
+    const svg = minifySVG(`<svg width="${totalWidth}" height="${height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <defs>
+        ${style === 'plastic' ? `
+        <linearGradient id="smooth" x2="0" y2="100%">
+          <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+          <stop offset="1" stop-opacity=".1"/>
+        </linearGradient>
+        <filter id="shadow">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
+          <feOffset dx="0" dy="1" result="offsetblur"/>
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.05"/>
+          </feComponentTransfer>
+          <feMerge>
+            <feMergeNode/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        ` : ''}
+        ${socialGradient}
+        ${customImageUrl ? `
+        <clipPath id="logo-clip">
+          <rect x="5" y="${(height - logoWidth) / 2}" width="${logoWidth}" height="${logoWidth}" rx="2"/>
+        </clipPath>
+        ` : ''}
+        <style>
+          text {
+            font-family: ${fontFamily};
+            font-size: ${style === 'for-the-badge' ? labelFontSize : fontSize}px;
+            font-weight: ${fontWeight};
+            fill: #fff;
+          }
+          .label-text {
+            fill: #fff;
+            ${style === 'for-the-badge' ? 'letter-spacing: 0.5px; text-transform: uppercase;' : ''}
+          }
+          .value-text {
+            fill: #fff;
+            font-weight: ${style === 'for-the-badge' ? '700' : '600'};
+          }
+        </style>
+      </defs>
+      
+      <g ${style === 'social' ? 'filter="url(#shadow)"' : shadowFilter ? `filter="${shadowFilter}"` : ''}>
+        <!-- Label background -->
+        <rect width="${totalLabelWidth}" height="${height}" fill="${labelColor}" rx="${borderRadius}"/>
+        
+        <!-- Value background -->
+        <rect x="${totalLabelWidth}" width="${valueWidth}" height="${height}" fill="${color}" rx="${borderRadius}"/>
+        
+        ${style === 'plastic' || style === 'social' ? `<rect width="${totalWidth}" height="${height}" fill="url(${style === 'social' ? '#a' : '#smooth'})" rx="${borderRadius}"/>` : ''}
+        
+        <!-- Custom image or Logo -->
+        ${customImageUrl ? `
+          <image href="${customImageUrl}" 
+                 x="5" 
+                 y="${(height - logoWidth) / 2}" 
+                 width="${logoWidth}" 
+                 height="${logoWidth}"
+                 clip-path="url(#logo-clip)"
+                 preserveAspectRatio="xMidYMid meet"/>
+        ` : logo !== 'none' ? `
+          <g transform="translate(6, ${(height - logoWidth) / 2}) scale(${logoWidth / 24})">
+            <path d="${logoSvg}" fill="${logoColor}"/>
+          </g>
+        ` : ''}
+        
+        <!-- Label text -->
+        <text x="${totalLabelWidth / 2 + (logoSpace / 2)}" 
+              y="${height / 2}" 
+              text-anchor="middle" 
+              dominant-baseline="central"
+              class="label-text">${label}</text>
+        
+        <!-- Value text -->
+        <text x="${totalLabelWidth + (valueWidth / 2)}" 
+              y="${height / 2}" 
+              text-anchor="middle" 
+              dominant-baseline="central"
+              class="value-text">${count.toLocaleString()}</text>
+      </g>
+    </svg>`);
+    
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(svg);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
+
+// API to get view count
+app.get('/view/:username/count', (req: Request, res: Response) => {
+  const { username } = req.params;
+  res.json({ 
+    username, 
+    views: viewCounters[username] || 0,
+    timestamp: Date.now()
+  });
+});
+
+app.post('/view/:username/reset', (req: Request, res: Response) => {
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  const { username } = req.params;
+  const oldCount = viewCounters[username] || 0;
+  viewCounters[username] = 0;
+  res.json({ 
+    success: true, 
+    username, 
+    old_views: oldCount,
+    new_views: 0 
+  });
+});
+
+app.get('/view/stats/all', (req: Request, res: Response) => {
+  const apiKey = req.query.api_key;
+  if (apiKey !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  const stats = Object.entries(viewCounters)
+    .map(([username, views]) => ({ username, views }))
+    .sort((a, b) => b.views - a.views);
+  
+  res.json({
+    total_users: stats.length,
+    total_views: stats.reduce((sum, s) => sum + s.views, 0),
+    stats
+  });
+});
+// app.get('/profile', async (req: Request, res: Response) => {
+//   try {
+//     const { username, data, theme, url, background } = req.query;
+    
+//     if (!username) {
+//       return res.status(400).json({ error: 'Username is required' });
+//     }
+    
+//     const stats = await getUserStats(username as string);
+    
+//     res.setHeader('Content-Type', 'image/svg+xml');
+//     res.setHeader('Cache-Control', 'public, max-age=1800');
+//     res.send(generateProfileCard(stats, req.query as BadgeOptions));
+//   } catch (error: any) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 app.get('/profile', async (req: Request, res: Response) => {
   try {
-    const { username, data, theme, url, background, repos } = req.query;
+    const { username } = req.query;
     
     if (!username) {
       return res.status(400).json({ error: 'Username is required' });
     }
     
     const stats = await getUserStats(username as string);
+    const svg = await generateProfileCard(stats, req.query as BadgeOptions);
     
-    // Nếu có tham số repos, lấy thêm thông tin repos
-    if (repos === 'true') {
-      const reposList = await githubFetch(`/users/${username}/repos?per_page=6&sort=stars`);
-      stats.topRepos = reposList.map((r: any) => ({
-        name: r.name,
-        stars: r.stargazers_count,
-        language: r.language
-      }));
-    }
-    
-    res.setHeader('Content-Type', 'image/svg+xml');
-    res.setHeader('Cache-Control', 'public, max-age=1800');
-    res.send(generateProfileCard(stats, req.query as BadgeOptions));
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=1800');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(svg);
   } catch (error: any) {
-    console.error('Profile error:', error); // Debug log
+    console.error('Profile error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1221,6 +1490,16 @@ app.get('/badge/:type', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/custom', (req: Request, res: Response) => {
+  try {
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(generateCustomBadge(req.query as CustomBadgeOptions));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 app.get('/social/:platform/:identifier', async (req: Request, res: Response) => {
   try {
     const { platform, identifier } = req.params;
